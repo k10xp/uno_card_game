@@ -8,5 +8,6 @@
 ## Tech stack
 
 - JavaScript + NodeJS
+  - vanilla JavaScript or frontend framework (e.g. Vue)
 - websocket server
 - Docker
