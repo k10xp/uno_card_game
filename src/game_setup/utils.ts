@@ -39,6 +39,7 @@ export function chooseBestColor(hand: Card[]): Color {
   return best;
 }
 
+//choose single card to play based on best score
 export function findBestPlayable(
   hand: Card[],
   scoreFn: (c: Card, hand: Card[], state: GameState) => number,

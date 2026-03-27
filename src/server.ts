@@ -1,5 +1,6 @@
 import { WebSocketServer } from "ws";
-import { createDeck, shuffled, Card } from "./deck";
+import { createDeck, shuffled } from "./game_setup/deck";
+import { Card } from "./game_setup/types";
 
 const wsServer = new WebSocketServer({ port: 3000 });
 console.log("WebSocket server running on ws://localhost:3000");
