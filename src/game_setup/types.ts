@@ -28,7 +28,7 @@ export interface GameState {
   currentColor: Color; // active color after wilds
   nextPlayerCardCount: number;
   playersCount: number;
-  direction: 1 | -1;
+  direction: 1 | -1; //1 = forward, -1 = reverse
 }
 
 export interface Move {
