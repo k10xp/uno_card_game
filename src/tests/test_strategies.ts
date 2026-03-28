@@ -4,6 +4,7 @@ import { Card, GameState, Move } from "../game_setup/types";
 //separate strategies
 import { chooseUnoMoveAggressive } from "../strategies/aggressive";
 import { chooseUnoMoveConservative } from "../strategies/conservative";
+import { chooseUnoMoveCheater } from "../strategies/cheater";
 
 //TODO: move into game_setup/deck.ts
 function drawCards(
@@ -62,6 +63,22 @@ function main() {
       "Conservative strategy plays:",
       consMove.card.color,
       consMove.card.value,
+      "\n"
+    );
+  }
+
+  //cheater AI choice, will sometimes match aggressive AI choice
+  const opponentHandCounts = [3, 5, 1];
+  console.log("Opponent hand counts:", opponentHandCounts);
+
+  const cheatMove: Move = chooseUnoMoveCheater(hand, state, opponentHandCounts);
+  if (cheatMove.type === "draw" || !cheatMove.card) {
+    console.log("AI chooses to draw a card.\n");
+  } else {
+    console.log(
+      "Cheating strategy plays:",
+      cheatMove.card.color,
+      cheatMove.card.value,
       "\n"
     );
   }
