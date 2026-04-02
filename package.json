@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "ts-node src/server.ts",
     "build": "tsc",
+    "strat_test": "npx ts-node src/tests/test_strategies.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {

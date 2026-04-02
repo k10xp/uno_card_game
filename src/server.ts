@@ -1,6 +1,6 @@
-import { WebSocketServer, WebSocket } from "ws";
-import { createDeck, shuffled, Card } from "./deck";
-import { Player } from "./player";
+import { WebSocketServer } from "ws";
+import { createDeck, shuffled } from "./game_setup/deck";
+import { Card } from "./game_setup/types";
 
 const wsServer = new WebSocketServer({ port: 3000 });
 console.log("WebSocket server running on ws://localhost:3000");
@@ -68,55 +68,21 @@ function getNextPlayerId(){
 }
 
 //Listen for client connection
-wsServer.on("connection", (socket: WebSocket) => {
-    // Assign a free ID first
-    const id = getNextPlayerId();
-    // No available IDs → reject connection gracefully
-    if (!id) {
-        console.log("A fifth player tried to join, rejecting connection");
-        try {
-            socket.send(JSON.stringify({ type: "ERROR", message: "Game full" }));
-        } catch (err) {
-            console.error("Failed to send error to client:", err);
-        }
-        socket.close(1000, "Game full");
-        return;
-    }
+wsServer.on("connection", (socket) => {
+  console.log("Client connected");
 
-  //Player with empty hand
-  const player = new Player(id, socket, []);
-  players.push(player);
-  console.log(`Player ${id} joined`);
-  sendLobbyState();
+  //Creating array of cards as hand
+  //Taking first 5 as opening hand
+  const hand: Card[] = deck.splice(0, 5);
 
-  //Listen to messages from client in order to start game
-  socket.on("message", (data) => {
-        let msg;
-        try {
-            msg = JSON.parse(data.toString());
-        } catch (err) {
-            console.error("Invalid JSON from client:", err);
-            return;
-        }
+  //Verifying that cards have been pulled from same deck
+  console.log("Cards left in deck: ", deck.length);
 
-        // Trigger startGame() if client sends START_GAME
-        if (msg.type === "START_GAME") {
-            console.log(`Player ${id} requested to start the game`);
-            startGame();
-        }
-    });
-
-  //Handling disconnected players
-  socket.on("close", () => {
-    const index = players.findIndex(p => p.id === id);
-    if(index !== -1){
-        console.log(`Player ${id} disconnected`);
-        //Removing player from lobby
-        players.splice(index, 1);
-        //updating remaining players
-        sendLobbyState();
-    }
-  })
+  //Send initial hand to client
+  socket.send(
+    JSON.stringify({
+      type: "HAND",
+      cards: hand,
+    })
+  );
 });
-
-
