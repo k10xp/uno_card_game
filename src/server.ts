@@ -1,50 +1,45 @@
-import { WebSocketServer } from "ws";
+import { WebSocketServer, WebSocket } from "ws";
 import { createDeck, shuffled } from "./game_setup/deck";
 import { Card } from "./game_setup/types";
+import { Player } from "./game_setup/player";
 
 const wsServer = new WebSocketServer({ port: 3000 });
-console.log("WebSocket server running on ws://localhost:3000");
+console.log("WebSocket server running on port 3000");
 
 const players: Player[] = [];
 let deck: Card[] = [];
 let gameStarted = false;
 
-//Lobby before game starts
+// ---- Lobby ----
 function sendLobbyState() {
-    const info = {
-        type: "LOBBY",
-        playerCount: players.length
-    };
-
-    for (const p of players) {
-        p.socket.send(JSON.stringify(info));
-    }
+  const info = {
+    type: "LOBBY",
+    playerCount: players.length,
+  };
+  for (const p of players) {
+    p.socket.send(JSON.stringify(info));
+  }
 }
 
-//Game
+// ---- Game logic ----
 function startGame() {
-    if (gameStarted){
-        return;
-    }
-    gameStarted = true;
-    deck = shuffled(createDeck());
+  if (gameStarted) return;
 
-    for (const player of players) {
-        player.hand = deck.splice(0, 7);
-    }
+  gameStarted = true;
+  deck = shuffled(createDeck());
 
-    sendGameState();
+  for (const player of players) {
+    player.hand = deck.splice(0, 7); // 7 cards like PR1
+  }
+
+  sendGameState();
 }
 
-//Info to players
 function sendGameState() {
   for (const player of players) {
     const opponents = players
       .filter((p) => p.id !== player.id)
-      .map((p) => ({
-        id: p.id,
-        cardCount: p.hand.length,
-      }));
+      .map((p) => ({ id: p.id, cardCount: p.hand.length }));
 
     player.socket.send(
       JSON.stringify({
@@ -56,33 +51,54 @@ function sendGameState() {
   }
 }
 
-//Next player id, 1-4
-function getNextPlayerId(){
-    for(let i = 1; i <= 4; i++){
-        if(!players.find(p => p.id === i.toString())){
-            return i.toString();
-        }
-    }
-    //If no free ids
-    return undefined;
+function getNextPlayerId(): string | undefined {
+  for (let i = 1; i <= 4; i++) {
+    if (!players.find((p) => p.id === i.toString())) return i.toString();
+  }
+  return undefined;
 }
 
-//Listen for client connection
-wsServer.on("connection", (socket) => {
-  console.log("Client connected");
+// ---- WebSocket connections ----
+wsServer.on("connection", (socket: WebSocket) => {
+  const id = getNextPlayerId();
 
-  //Creating array of cards as hand
-  //Taking first 5 as opening hand
-  const hand: Card[] = deck.splice(0, 5);
+  if (!id) {
+    console.log("A fifth player tried to join, rejecting connection");
+    try {
+      socket.send(JSON.stringify({ type: "ERROR", message: "Game full" }));
+    } catch (err) {
+      console.error("Failed to send error to client:", err);
+    }
+    socket.close(1000, "Game full");
+    return;
+  }
 
-  //Verifying that cards have been pulled from same deck
-  console.log("Cards left in deck: ", deck.length);
+  const player = new Player(id, socket, []);
+  players.push(player);
+  console.log(`Player ${id} joined`);
+  sendLobbyState();
 
-  //Send initial hand to client
-  socket.send(
-    JSON.stringify({
-      type: "HAND",
-      cards: hand,
-    })
-  );
+  socket.on("message", (data) => {
+    let msg;
+    try {
+      msg = JSON.parse(data.toString());
+    } catch (err) {
+      console.error("Invalid JSON from client:", err);
+      return;
+    }
+
+    if (msg.type === "START_GAME") {
+      console.log(`Player ${id} requested to start the game`);
+      startGame();
+    }
+  });
+
+  socket.on("close", () => {
+    const index = players.findIndex((p) => p.id === id);
+    if (index !== -1) {
+      console.log(`Player ${id} disconnected`);
+      players.splice(index, 1);
+      sendLobbyState();
+    }
+  });
 });

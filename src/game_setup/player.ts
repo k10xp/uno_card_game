@@ -1,4 +1,4 @@
-import {Card} from "./deck";
+import { Card } from "../game_setup/types";
 import { WebSocket } from "ws";
 
 export class Player {
