@@ -5,9 +5,67 @@ import { Card } from "./game_setup/types";
 const wsServer = new WebSocketServer({ port: 3000 });
 console.log("WebSocket server running on ws://localhost:3000");
 
-//Shared state, without this all users would have their own deck
-const players: any[] = [];
-const deck: Card[] = shuffled(createDeck());
+const players: Player[] = [];
+let deck: Card[] = [];
+let gameStarted = false;
+
+//Lobby before game starts
+function sendLobbyState() {
+    const info = {
+        type: "LOBBY",
+        playerCount: players.length
+    };
+
+    for (const p of players) {
+        p.socket.send(JSON.stringify(info));
+    }
+}
+
+//Game
+function startGame() {
+    if (gameStarted){
+        return;
+    }
+    gameStarted = true;
+    deck = shuffled(createDeck());
+
+    for (const player of players) {
+        player.hand = deck.splice(0, 7);
+    }
+
+    sendGameState();
+}
+
+//Info to players
+function sendGameState() {
+  for (const player of players) {
+    const opponents = players
+      .filter((p) => p.id !== player.id)
+      .map((p) => ({
+        id: p.id,
+        cardCount: p.hand.length,
+      }));
+
+    player.socket.send(
+      JSON.stringify({
+        type: "GAME_STATE",
+        hand: player.hand,
+        opponents,
+      })
+    );
+  }
+}
+
+//Next player id, 1-4
+function getNextPlayerId(){
+    for(let i = 1; i <= 4; i++){
+        if(!players.find(p => p.id === i.toString())){
+            return i.toString();
+        }
+    }
+    //If no free ids
+    return undefined;
+}
 
 //Listen for client connection
 wsServer.on("connection", (socket) => {
