@@ -1,0 +1,104 @@
+/* =========================
+   HOME LAYOUT
+========================= */
+.home {
+  height: 100vh;
+  gap: 20px;
+}
+
+.lobby {
+  font-size: 18px;
+  opacity: 0.8;
+}
+
+/* =========================
+   GLOBAL RESET
+========================= */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+  background: #0f172a; /* dark game background */
+  color: white;
+}
+
+/* =========================
+   LAYOUT HELPERS
+========================= */
+.center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* =========================
+   BUTTON SYSTEM (GLOBAL)
+========================= */
+.btn {
+  padding: 12px 18px;
+  font-size: 14px;
+  font-weight: bold;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 1px;
+}
+
+/* PRIMARY (START GAME) */
+.btn.primary {
+  background: #22c55e;
+  color: white;
+  box-shadow: 0 4px 0 #15803d;
+}
+
+.btn.primary:hover {
+  transform: translateY(-2px);
+  background: #16a34a;
+}
+
+.btn.primary:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 #15803d;
+}
+
+/* ACTION BUTTON (PLAY CARD) */
+.btn.play {
+  background: #ef4444;
+  color: white;
+  box-shadow: 0 4px 0 #991b1b;
+}
+
+.btn.play:hover {
+  transform: translateY(-2px);
+}
+
+/* SECONDARY (DRAW CARD) */
+.btn.secondary {
+  background: #3b82f6;
+  color: white;
+  box-shadow: 0 4px 0 #1d4ed8;
+}
+
+.btn.secondary:hover {
+  transform: translateY(-2px);
+}
+
+/* DISABLED */
+.btn:disabled {
+  background: #64748b !important;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+  opacity: 0.6;
+}
