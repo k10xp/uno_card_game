@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import Card from "./Card.vue";
-import type { Card as CardType } from "../types/card";
+import Card from "@/components/Card.vue";
+import type { Card as CardType } from "@/types/card";
 
 defineProps<{
   topCard: CardType;

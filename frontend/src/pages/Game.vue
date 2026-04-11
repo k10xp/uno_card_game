@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import { gameState, send, initSocket } from "../socket";
+import { gameState, send, initSocket } from "@/socket";
 
-import GameTable from "../components/GameTable.vue";
-import Opponents from "../components/Opponents.vue";
-import PlayerHand from "../components/PlayerHand.vue";
+import GameTable from "@/components/GameTable.vue";
+import Opponents from "@/components/Opponents.vue";
+import PlayerHand from "@/components/PlayerHand.vue";
 
 initSocket();
 

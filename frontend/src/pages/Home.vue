@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { watch } from "vue";
 import { useRouter } from "vue-router";
-import { initSocket, send, lobby, gameStarted } from "../socket";
+import { initSocket, send, lobby, gameStarted } from "@/socket";
 
 initSocket(); 
 
