@@ -53,7 +53,6 @@ export class Game {
     return undefined;
   }
 
-
   //Game Start
   //Game can start if there are minimum 2 players, this could be changed later on
   start() {
@@ -175,6 +174,7 @@ export class Game {
 
   //Send each player their personalized game state
   //Each player hand, opponents card count, top discard card (value/color) and if its their turn
+  //Added drawPileCount and discardPileCount
   private sendGameState() {
     const topCard = this.discardPile[this.discardPile.length - 1];
 
@@ -194,6 +194,8 @@ export class Game {
           topCard,
           currentColor: this.currentColor,
           yourTurn: this.isPlayersTurn(player.id),
+          drawPileCount: this.deck.length,
+          discardPileCount: this.discardPile.length,
         })
       );
     }
