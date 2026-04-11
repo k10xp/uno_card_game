@@ -1,5 +1,5 @@
 import { ref } from "vue";
-import router from "./router";
+import router from "@/router";
 
 export const gameState = ref<any>(null);
 export const lobby = ref<any>(null);

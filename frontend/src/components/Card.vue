@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import type { Card } from "../types/card";
+import type { Card } from "@/types/card";
 
 // Before we get card images
-import { getCardAsset } from "../composables/useCardAssets";
+import { getCardAsset } from "@/composables/useCardAssets";
 // When we have images
 // import { getCardImage } from "../composables/useCardAssets";
 

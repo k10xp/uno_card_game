@@ -1,4 +1,4 @@
-import type { Card } from "../types/card.ts";
+import type { Card } from "@/types/card.ts";
 
 //replace text with images here
 export function getCardAsset(card: Card): string {
