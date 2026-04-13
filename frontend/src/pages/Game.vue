@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { gameState, send, initSocket } from "@/socket";
 
 import GameTable from "@/components/GameTable.vue";
 import Opponents from "@/components/Opponents.vue";
 import PlayerHand from "@/components/PlayerHand.vue";
 
-initSocket();
+onMounted(() => {
+  initSocket();
+});
 
 const selectedIndex = ref<number | null>(null);
 
@@ -30,6 +32,10 @@ function playCard() {
 
 function drawCard() {
   send({ type: "DRAW_CARD" });
+}
+
+function testGameOver() {
+  send({ type: "FORCE_WIN" });
 }
 </script>
 
@@ -63,10 +69,10 @@ function drawCard() {
       <button class="btn secondary" @click="drawCard" :disabled="!isMyTurn">
         DRAW CARD
       </button>
+
+      <button @click="testGameOver" class="btn primary">TEST GAME OVER</button>
     </div>
   </div>
 
   <div v-else>Loading game...</div>
 </template>
-
-
