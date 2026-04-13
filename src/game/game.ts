@@ -1,152 +1,167 @@
 import { WebSocket } from "ws";
-import { Player } from "../game_setup/player";
+import { Player, PlayerRole } from "../game_setup/player";
 import { createDeck, shuffled } from "../game_setup/deck";
 import { Card, Color } from "../game_setup/types";
 
-//Manages the full game state and rules for a UNO-like game
 export class Game {
-  private players: Player[] = [];
-  private deck: Card[] = [];
-  private discardPile: Card[] = [];
+  private players: Player[] = []; //All connected players (players and spectators)
+  private deck: Card[] = []; //Draw pile
+  private discardPile: Card[] = []; //Played cards pile
+  private currentPlayerIndex = 0; //Index in currentGamePlayers
+  private direction: 1 | -1 = 1; //1 = Clockwise, -1 = the otherway
+  private currentColor: Color = "red"; //Current playable color
+  private started = false; //Is game in progress
+  private inGameOver: Set<string> = new Set(); //Tracks players who finished the game
+  private currentGamePlayers: Player[] = []; //Active players for current round
 
-  private currentPlayerIndex = 0;
-  private direction: 1 | -1 = 1;
-  private currentColor: Color = "red";
+  // -----------------------
+  // Player Management
+  // -----------------------
+  addPlayer(socket: WebSocket): Player {
+    // Remove disconnected players
+    this.players = this.players.filter(
+      (p) => p.socket.readyState === WebSocket.OPEN
+    );
 
-  private started = false;
-
-  //Player Management
-  //Adds a new player if there is room (max 4 players)
-  //Assigns the lowest available numeric ID as a string
-  addPlayer(socket: WebSocket): Player | null {
+    // Assign an ID for new player
     const id = this.getNextPlayerId();
 
-    if (!id) {
-      socket.send(JSON.stringify({ type: "ERROR", message: "Game full" }));
-      socket.close();
-      return null;
+    let role: PlayerRole = "spectator";
+    if (id) {
+      // Up to 4 players can be active else assign spectator
+      role =
+        this.players.filter((p) => p.role === "player").length < 4
+          ? "player"
+          : "spectator";
     }
 
-    const player = new Player(id, socket, []);
-    this.players.push(player);
+    const playerId = id ?? `spectator-${Date.now()}`;
+    const newPlayer = new Player(playerId, socket, [], role);
+    this.players.push(newPlayer);
+
+    //Test
+    // Spectators always have empty hands
+    //if (newPlayer.role === "spectator") newPlayer.hand = [];
 
     this.sendLobbyState();
-    return player;
+    return newPlayer;
   }
 
-  //Removes a player by ID and updates lobby state
-  removePlayer(id: string) {
-    const index = this.players.findIndex((p) => p.id === id);
-    if (index !== -1) {
-      this.players.splice(index, 1);
-      this.sendLobbyState();
-    }
+  removePlayerBySocket(socket: WebSocket) {
+    this.players = this.players.filter((p) => p.socket !== socket);
+    this.sendLobbyState();
   }
 
-  //Returns the next available player ID ("1"–"4")
   private getNextPlayerId(): string | undefined {
+    //Assigns first available number ID 1-4
     for (let i = 1; i <= 4; i++) {
-      if (!this.players.find((p) => p.id === i.toString())) {
-        return i.toString();
-      }
+      if (!this.players.find((p) => p.id === i.toString())) return i.toString();
     }
     return undefined;
   }
 
-  //Game Start
-  //Game can start if there are minimum 2 players, this could be changed later on
+  // -----------------------
+  // Game Start / Reset
+  // -----------------------
   start() {
-    if (this.started || this.players.length < 2) return;
+    if (this.started) return;
+
+    //Select only active players (ignore spectators, disconnected players)
+    this.currentGamePlayers = this.players.filter(
+      (p) =>
+        p.role === "player" &&
+        !this.inGameOver.has(p.id) &&
+        p.socket.readyState === WebSocket.OPEN
+    );
+
+    //Need atleast 2 players to start
+    if (this.currentGamePlayers.length < 2) {
+      this.sendLobbyState();
+      return;
+    }
+
+    this.resetGame();
 
     this.started = true;
     this.deck = shuffled(createDeck());
-
-    //Deal cards
-    for (const player of this.players) {
-      player.hand = this.deck.splice(0, 7);
-    }
-
-    //Initialize discard pile
-    //TODO handle special cards
-    const firstCard = this.deck.pop()!;
-    this.discardPile = [firstCard];
-    this.currentColor = firstCard.color;
-
+    this.discardPile = [];
     this.currentPlayerIndex = 0;
     this.direction = 1;
 
-    this.sendGameState();
+    // Deal 7 cards to each active player
+    for (const player of this.currentGamePlayers) {
+      player.hand = this.deck.splice(0, 7);
+    }
+
+    // First card on discard pile
+    const firstCard = this.deck.pop();
+    if (!firstCard) return;
+    this.discardPile = [firstCard];
+    this.currentColor = firstCard.color; //TODO: handle wild cards as first card
+
+    // Ensure spectators never have cards
+    for (const player of this.players) {
+      if (player.role === "spectator") player.hand = [];
+    }
+
+    this.sendGameState(); //Send initial state to all clients
   }
 
-  //Game Actions
+  // -----------------------
+  // Game Actions
+  // -----------------------
   playCard(playerId: string, card: Card) {
-    //Validation
     const player = this.players.find((p) => p.id === playerId);
-    //Check if player exist
-    if (!player) return;
-    //Check if its players turn
-    if (!this.isPlayersTurn(playerId)) return;
-    //Check if the play is valid
-    if (!this.isValidMove(card)) return;
+    if (!player || !this.currentGamePlayers.includes(player)) return;
 
-    //Find matching card in player hand
+    if (!this.isPlayersTurn(playerId)) return; //Not players turn
+    if (!this.isValidMove(card)) return; //Invalid card
+
     const index = player.hand.findIndex(
       (c) => c.color === card.color && c.value === card.value
     );
+    if (index === -1) return; //Card not in hand
 
-    if (index === -1) return;
-
-    // Remove card from hand
-    player.hand.splice(index, 1);
-
-    // Add card to discard
+    player.hand.splice(index, 1); //Remove played card
     this.discardPile.push(card);
 
-    // Update color
-    if (card.color !== "wild") {
-      this.currentColor = card.color;
-    }
+    //Set current color unless wild
+    if (card.color !== "wild") this.currentColor = card.color;
+    //TODO: handle wild cards
 
-    // Win condition player has no card left in hand
     if (player.hand.length === 0) {
-      this.broadcast({
-        type: "GAME_OVER",
-        winner: player.id,
-      });
-      this.started = false;
+      this.endGame(player.id); //Player wins
       return;
     }
 
     this.nextTurn();
-    this.sendGameState();
+    this.sendGameState(); //Broadcast updated state
   }
 
-  //Draw one card from deck and end player turn
   drawCard(playerId: string) {
     const player = this.players.find((p) => p.id === playerId);
-    if (!player) return;
-
+    if (!player || !this.currentGamePlayers.includes(player)) return;
     if (!this.isPlayersTurn(playerId)) return;
 
     const card = this.deck.pop();
-    if (!card) return;
+    if (!card) return; //TODO: handle empty deck, as in resuffle
 
     player.hand.push(card);
-
     this.nextTurn();
     this.sendGameState();
   }
 
-  //Helpers
-  //Check if its players turn
-  private isPlayersTurn(playerId: string): boolean {
-    return this.players[this.currentPlayerIndex]?.id === playerId;
+  // -----------------------
+  // Game Helpers
+  // -----------------------
+  private isPlayersTurn(playerId: string) {
+    //Returns true if it is players turn
+    return this.currentGamePlayers[this.currentPlayerIndex]?.id === playerId;
   }
 
-  //Check card play is valid
-  private isValidMove(card: Card): boolean {
+  private isValidMove(card: Card) {
     const top = this.discardPile[this.discardPile.length - 1];
-
+    if (!top) return false;
     return (
       card.color === this.currentColor ||
       card.value === top.value ||
@@ -154,46 +169,104 @@ export class Game {
     );
   }
 
-  //Advances one turn, direction can be either 1(clockwise) or -1(counterclokWise)
   private nextTurn() {
+    if (this.currentGamePlayers.length === 0) return;
+
+    //Handles clockwise and not clockwise
     this.currentPlayerIndex =
-      (this.currentPlayerIndex + this.direction + this.players.length) %
-      this.players.length;
+      (this.currentPlayerIndex +
+        this.direction +
+        this.currentGamePlayers.length) %
+      this.currentGamePlayers.length;
   }
 
-  //Communication
-  //Lobbystate for players before game start
+  private endGame(winnerId: string) {
+    this.started = false;
+    this.deck = [];
+    this.discardPile = [];
+    this.currentColor = "red";
+    this.currentPlayerIndex = 0;
+    this.direction = 1;
+
+    //Clear hands of all current players and mark them as finished
+    for (const p of this.currentGamePlayers) {
+      p.hand = [];
+      // Reset role and ID so they can rejoin as player
+      p.role = "spectator";
+      p.id = `spectator-${p.id}`; // prefix old id
+    }
+
+    this.broadcast({ type: "GAME_OVER", winner: winnerId });
+
+    this.currentGamePlayers = [];
+    this.sendLobbyState();
+  }
+
+  rejoinLobby(playerId: string) {
+    const player = this.players.find((p) => p.id === playerId);
+    if (!player) return;
+
+    //Assign a player role if there's space
+    if (player.role === "spectator") {
+      const nextId = this.getNextPlayerId();
+      if (nextId) {
+        player.role = "player";
+        player.id = nextId; // Give them a proper player ID
+      }
+    }
+
+    this.sendLobbyState();
+  }
+
+  private resetGame() {
+    //Reset state for new game
+    this.deck = [];
+    this.discardPile = [];
+    this.currentPlayerIndex = 0;
+    this.direction = 1;
+    this.currentColor = "red";
+    this.started = false;
+
+    for (const p of this.players) {
+      p.hand = []; // Reset all hands
+    }
+  }
+
+  // -----------------------
+  // Communication
+  // -----------------------
+  private broadcast(data: any) {
+    const message = JSON.stringify(data);
+    for (const p of this.players) {
+      if (p.socket.readyState === WebSocket.OPEN) p.socket.send(message);
+    }
+  }
+
   private sendLobbyState() {
-    const data = {
-      type: "LOBBY",
-      playerCount: this.players.length,
-    };
-
-    this.broadcast(data);
+    const activeCount = this.players.filter((p) => p.role === "player").length;
+    this.broadcast({ type: "LOBBY", playerCount: activeCount });
   }
 
-  //Send each player their personalized game state
-  //Each player hand, opponents card count, top discard card (value/color) and if its their turn
-  //Added drawPileCount and discardPileCount
   private sendGameState() {
     const topCard = this.discardPile[this.discardPile.length - 1];
 
     for (const player of this.players) {
-      const opponents = this.players
+      if (player.socket.readyState !== WebSocket.OPEN) continue;
+
+      const isActive = this.currentGamePlayers.includes(player);
+
+      const opponents = this.currentGamePlayers
         .filter((p) => p.id !== player.id)
-        .map((p) => ({
-          id: p.id,
-          cardCount: p.hand.length,
-        }));
+        .map((p) => ({ id: p.id, cardCount: p.hand.length }));
 
       player.socket.send(
         JSON.stringify({
           type: "GAME_STATE",
-          hand: player.hand,
+          hand: isActive ? player.hand : [],
           opponents,
           topCard,
           currentColor: this.currentColor,
-          yourTurn: this.isPlayersTurn(player.id),
+          yourTurn: isActive && this.isPlayersTurn(player.id),
           drawPileCount: this.deck.length,
           discardPileCount: this.discardPile.length,
         })
@@ -201,10 +274,12 @@ export class Game {
     }
   }
 
-  //Send message to all connected players
-  private broadcast(data: any) {
-    for (const p of this.players) {
-      p.socket.send(JSON.stringify(data));
-    }
+  // -----------------------
+  // Force Win (Admin / Debug)
+  // -----------------------
+  forceWin(playerId: string) {
+    const winner = this.players.find((p) => p.id === playerId);
+    if (!winner || !this.currentGamePlayers.includes(winner)) return;
+    this.endGame(winner.id);
   }
 }
