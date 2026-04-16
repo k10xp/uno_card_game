@@ -39,10 +39,6 @@ export class Game {
     const newPlayer = new Player(playerId, socket, [], role);
     this.players.push(newPlayer);
 
-    //Test
-    // Spectators always have empty hands
-    //if (newPlayer.role === "spectator") newPlayer.hand = [];
-
     this.sendLobbyState();
     return newPlayer;
   }
@@ -93,11 +89,22 @@ export class Game {
       player.hand = this.deck.splice(0, 7);
     }
 
-    // First card on discard pile
-    const firstCard = this.deck.pop();
+    //First card on discard pile, any card except wild cards
+    let firstCard: Card | undefined;
+    while (this.deck.length > 0) {
+      const card = this.deck.pop();
+      if (!card) break;
+      // Accept only non-wild cards
+      if (card.color !== "wild") {
+        firstCard = card;
+        break;
+      }
+      // Put wild cards back into the deck 
+      this.deck.unshift(card);
+    }
     if (!firstCard) return;
     this.discardPile = [firstCard];
-    this.currentColor = firstCard.color; //TODO: handle wild cards as first card
+    this.currentColor = firstCard.color;
 
     // Ensure spectators never have cards
     for (const player of this.players) {

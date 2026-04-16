@@ -52,7 +52,7 @@ export function initSocket() {
         break;
 
       case "ERROR":
-        console.warn("Server error:", data.message);
+        console.error("Server error:", data.message);
         break;
     }
   };
