@@ -13,6 +13,7 @@ export class Game {
   private started = false; //Is game in progress
   private inGameOver: Set<string> = new Set(); //Tracks players who finished the game
   private currentGamePlayers: Player[] = []; //Active players for current round
+  private pendingWild: { playerId: string; card: Card } | null = null; //Holds a temporaru state when a wild card is played
 
   // -----------------------
   // Player Management
@@ -99,7 +100,7 @@ export class Game {
         firstCard = card;
         break;
       }
-      // Put wild cards back into the deck 
+      // Put wild cards back into the deck
       this.deck.unshift(card);
     }
     if (!firstCard) return;
@@ -118,6 +119,9 @@ export class Game {
   // Game Actions
   // -----------------------
   playCard(playerId: string, card: Card) {
+    //Safe guard reventing actions if wild card is in progress
+    if (this.pendingWild) return;
+
     const player = this.players.find((p) => p.id === playerId);
     if (!player || !this.currentGamePlayers.includes(player)) return;
 
@@ -132,9 +136,18 @@ export class Game {
     player.hand.splice(index, 1); //Remove played card
     this.discardPile.push(card);
 
-    //Set current color unless wild
-    if (card.color !== "wild") this.currentColor = card.color;
-    //TODO: handle wild cards
+    //If wild is played wait for color choise
+    if (card.color === "wild") {
+      //Store who played the wild card and which card it was
+      this.pendingWild = { playerId, card };
+      //Notify all clients that this player is choosing color
+      this.broadcast({
+        type: "CHOOSE_COLOR",
+        playerId,
+      });
+
+      return; // STOP here until color is chosen
+    }
 
     if (player.hand.length === 0) {
       this.endGame(player.id); //Player wins
@@ -146,6 +159,9 @@ export class Game {
   }
 
   drawCard(playerId: string) {
+    //Safe guard reventing actions if wild card is in progress
+    if (this.pendingWild) return;
+
     const player = this.players.find((p) => p.id === playerId);
     if (!player || !this.currentGamePlayers.includes(player)) return;
     if (!this.isPlayersTurn(playerId)) return;
@@ -158,9 +174,44 @@ export class Game {
     this.sendGameState();
   }
 
+  //When wild card is played
+  chooseColor(playerId: string, color: Color) {
+    //No pending wild return
+    if (!this.pendingWild) return;
+    //Player who played wild card can choose color
+    if (this.pendingWild.playerId !== playerId) return;
+
+    const { card } = this.pendingWild;
+    //Set the active color for the game
+    this.currentColor = color;
+    // Handle special wild effects
+    if (card.value === "wild_draw4") {
+      this.applyDrawPenalty(4);
+    }
+    //Clear pending state, game can proceed
+    this.pendingWild = null;
+    //Move to next player after resolving wild card
+    this.nextTurn();
+    //Send uppdated state for all players
+    this.sendGameState();
+  }
+
   // -----------------------
   // Game Helpers
   // -----------------------
+  private applyDrawPenalty(count: number) {
+    //Move to the next player who received penalty
+    this.nextTurn();
+
+    const target = this.currentGamePlayers[this.currentPlayerIndex];
+    if (!target) return;
+    //Draw "count" cards from deck
+    for (let i = 0; i < count; i++) {
+      const card = this.deck.pop();
+      if (card) target.hand.push(card);
+    }
+  }
+
   private isPlayersTurn(playerId: string) {
     //Returns true if it is players turn
     return this.currentGamePlayers[this.currentPlayerIndex]?.id === playerId;
@@ -233,6 +284,7 @@ export class Game {
     this.direction = 1;
     this.currentColor = "red";
     this.started = false;
+    this.pendingWild = null;
 
     for (const p of this.players) {
       p.hand = []; // Reset all hands
@@ -256,6 +308,7 @@ export class Game {
 
   private sendGameState() {
     const topCard = this.discardPile[this.discardPile.length - 1];
+    const isPendingWild = this.pendingWild !== null;
 
     for (const player of this.players) {
       if (player.socket.readyState !== WebSocket.OPEN) continue;
@@ -265,6 +318,8 @@ export class Game {
       const opponents = this.currentGamePlayers
         .filter((p) => p.id !== player.id)
         .map((p) => ({ id: p.id, cardCount: p.hand.length }));
+
+      const isWildPlayer = this.pendingWild?.playerId === player.id;
 
       player.socket.send(
         JSON.stringify({
@@ -276,6 +331,10 @@ export class Game {
           yourTurn: isActive && this.isPlayersTurn(player.id),
           drawPileCount: this.deck.length,
           discardPileCount: this.discardPile.length,
+
+          isWaitingForColor: isPendingWild && !isWildPlayer,
+          mustChooseColor: isWildPlayer,
+          yourId: player.id,
         })
       );
     }

@@ -18,6 +18,12 @@
 .card.yellow { background: #f1c40f; color: black; }
 .card.wild { background: #8e44ad; }
 
+.red { background: #e74c3c; }
+.blue { background: #3498db; }
+.green { background: #2ecc71; }
+.yellow { background: #f1c40f; color: black; }
+.wild { background: #8e44ad; }
+
 .card.selected {
   transform: scale(1.1);
   border: 3px solid black;

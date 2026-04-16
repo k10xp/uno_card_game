@@ -103,6 +103,14 @@ body {
   opacity: 0.6;
 }
 
+/* CHOOSE COLOR BUTTON */
+.color-btn {
+  width: 70px;
+  height: 100px;
+  padding: 0; /* override .btn padding */
+  border-radius: 10px;
+}
+
 /* =========================
    GAME OVER PAGE
 ========================= */
