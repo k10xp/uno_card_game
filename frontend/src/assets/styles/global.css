@@ -102,3 +102,32 @@ body {
   box-shadow: none !important;
   opacity: 0.6;
 }
+
+/* =========================
+   GAME OVER PAGE
+========================= */
+
+.game-over {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  text-align: center;
+}
+
+.game-over h1 {
+  font-size: 42px;
+  color: #fbbf24; /* gold-ish winner color */
+}
+
+.game-over p {
+  font-size: 20px;
+  opacity: 0.9;
+}
+
+/* reuse existing button system */
+.game-over button {
+  margin-top: 10px;
+}
