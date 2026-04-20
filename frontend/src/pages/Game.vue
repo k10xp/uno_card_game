@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import { gameState, send, initSocket } from "@/socket";
+import { gameState, send, initSocket, pendingColorChoice } from "@/socket";
+import ColorPicker from "@/components/ColorPicker.vue";
 
 import GameTable from "@/components/GameTable.vue";
 import Opponents from "@/components/Opponents.vue";
@@ -12,7 +13,17 @@ onMounted(() => {
 
 const selectedIndex = ref<number | null>(null);
 
-const isMyTurn = computed(() => gameState.value?.yourTurn ?? false);
+const isMyTurn = computed(
+  () => gameState.value?.yourTurn && !pendingColorChoice.value
+);
+
+const mustChooseColor = computed(
+  () => gameState.value?.mustChooseColor ?? false
+);
+
+const isWaitingForColor = computed(
+  () => gameState.value?.isWaitingForColor ?? false
+);
 
 function selectCard(i: number) {
   if (!isMyTurn.value) return;
@@ -45,13 +56,18 @@ function testGameOver() {
 
     <GameTable
       :topCard="gameState.topCard"
+      :currentColor="gameState.currentColor"
       :drawPileCount="gameState.drawPileCount ?? 0"
       :discardPileCount="gameState.discardPileCount ?? 0"
     />
 
     <Opponents :opponents="gameState.opponents" />
 
-    <p v-if="isMyTurn">🎯 Your turn</p>
+    <p v-if="mustChooseColor">🎨 Choose a color</p>
+    <p v-else-if="isWaitingForColor">
+      ⏳ Waiting for opponent to choose color...
+    </p>
+    <p v-else-if="isMyTurn">🎯 Your turn</p>
     <p v-else>⏳ Waiting...</p>
 
     <PlayerHand
@@ -72,7 +88,7 @@ function testGameOver() {
 
       <button @click="testGameOver" class="btn primary">TEST GAME OVER</button>
     </div>
+    <ColorPicker v-if="pendingColorChoice" />
   </div>
-
   <div v-else>Loading game...</div>
 </template>

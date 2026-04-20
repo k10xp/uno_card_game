@@ -37,6 +37,8 @@ wsServer.on("connection", (socket) => {
     } else if (msg.type === "REJOIN_LOBBY") {
       // Only allow rejoin if player exists
       game.rejoinLobby(player.id);
+    } else if (msg.type === "CHOOSE_COLOR") {
+      game.chooseColor(player.id, msg.color);
     } else {
       console.log("Unknown message type:", msg.type);
     }

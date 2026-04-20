@@ -1,12 +1,25 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import Card from "@/components/Card.vue";
-import type { Card as CardType } from "@/types/card";
+import type { Card as CardType, CardColor } from "@/types/card";
 
-defineProps<{
+const props = defineProps<{
   topCard: CardType;
+  currentColor: CardColor;
   drawPileCount: number;
   discardPileCount: number;
 }>();
+
+// If wild use currentColor for display
+const displayCard = computed(() => {
+  if (props.topCard.color === "wild") {
+    return {
+      ...props.topCard,
+      color: props.currentColor, //override only for UI
+    };
+  }
+  return props.topCard;
+});
 </script>
 
 <template>
@@ -14,7 +27,7 @@ defineProps<{
     <div class="pile">
       <h3>Discard</h3>
 
-      <Card :card="topCard" />
+      <Card :card="displayCard" />
 
       <small>{{ discardPileCount }} played</small>
     </div>
@@ -38,5 +51,4 @@ defineProps<{
 .pile {
   text-align: center;
 }
-
 </style>

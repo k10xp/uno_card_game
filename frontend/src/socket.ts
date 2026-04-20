@@ -6,6 +6,8 @@ export const gameState = ref<any>(null);
 export const lobby = ref<any>(null);
 export const gameStarted = ref(false);
 export const gameOver = ref<{ winner: string } | null>(null);
+export const pendingColorChoice = ref(false);
+export const myPlayerId = ref<string | null>(null);
 
 //Test
 export const isGameOver = ref(false);
@@ -42,9 +44,20 @@ export function initSocket() {
         break;
 
       case "GAME_STATE":
+        if (!myPlayerId.value) {
+          myPlayerId.value = data.yourId;
+        }
         isGameOver.value = false;
         gameState.value = data;
         gameStarted.value = true;
+        pendingColorChoice.value = false;
+        break;
+
+      case "CHOOSE_COLOR":
+        // Show color picker ONLY for the current player
+        if (data.playerId === myPlayerId.value) {
+          pendingColorChoice.value = true;
+        }
         break;
 
       case "GAME_OVER":
@@ -104,6 +117,7 @@ function handleGameOver(data: any) {
   gameState.value = null;
   gameStarted.value = false;
   lobby.value = null;
+  pendingColorChoice.value = false;
 
   router.push("/game-over");
 }
