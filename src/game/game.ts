@@ -199,6 +199,7 @@ export class Game {
   // -----------------------
   // Game Helpers
   // -----------------------
+  //Count must be an integer
   private applyDrawPenalty(count: number) {
     //Move to the next player who received penalty
     this.nextTurn();
