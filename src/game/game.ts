@@ -136,6 +136,23 @@ export class Game {
     player.hand.splice(index, 1); //Remove played card
     this.discardPile.push(card);
 
+    // Handle special cards (non-wild)
+    if (card.color !== "wild") {
+      switch (card.value) {
+        case "skip":
+          this.handleSkip();
+          break;
+
+        case "reverse":
+          this.handleReverse();
+          break;
+
+        case "draw2":
+          this.applyDrawPenalty(2);
+          break;
+      }
+    }
+
     //If wild is played wait for color choise
     if (card.color === "wild") {
       //Store who played the wild card and which card it was
@@ -149,12 +166,16 @@ export class Game {
       return; // STOP here until color is chosen
     }
 
+    //Check if game over
     if (player.hand.length === 0) {
-      this.endGame(player.id); //Player wins
+      this.endGame(player.id);
       return;
     }
 
-    this.nextTurn();
+    //Normal cards advance turn here, wild and special is handled further down
+    if (card.value !== "skip" && card.value !== "draw2") {
+      this.nextTurn();
+    }
     this.sendGameState(); //Broadcast updated state
   }
 
@@ -199,6 +220,22 @@ export class Game {
   // -----------------------
   // Game Helpers
   // -----------------------
+
+  //Skip next player turn
+  private handleSkip() {
+    this.nextTurn(); // move to skipped player
+    this.nextTurn(); // skip them
+  }
+
+  //Change direction
+  private handleReverse() {
+    this.direction *= -1;
+    //If two players, skipping next players turn
+    if (this.currentGamePlayers.length === 2) {
+      this.nextTurn();
+    }
+  }
+
   //Count must be an integer
   private applyDrawPenalty(count: number) {
     //Move to the next player who received penalty
@@ -211,6 +248,8 @@ export class Game {
       const card = this.deck.pop();
       if (card) target.hand.push(card);
     }
+    //Player who recieved extra cards will skip their turn
+    this.nextTurn();
   }
 
   private isPlayersTurn(playerId: string) {
