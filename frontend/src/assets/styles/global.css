@@ -4,11 +4,46 @@
 .home {
   height: 100vh;
   gap: 20px;
+  padding-top: 40px;
 }
 
 .lobby {
   font-size: 18px;
   opacity: 0.8;
+}
+
+.panel {
+  background: #111827;
+  padding: 16px;
+  border-radius: 12px;
+  width: 280px;
+  text-align: center;
+}
+
+.player-list {
+  list-style: none;
+  margin-top: 10px;
+}
+
+.player-list li {
+  padding: 6px 0;
+  opacity: 0.9;
+}
+
+.column{
+  gap: 16px;
+}
+
+.actions {
+  gap: 12px;
+  margin-top: 16px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+}
+
+.actions .btn {
+  min-width: 140px;
 }
 
 /* =========================
@@ -45,7 +80,7 @@ body {
    BUTTON SYSTEM (GLOBAL)
 ========================= */
 .btn {
-  padding: 12px 18px;
+  padding: 10px 16px;
   font-size: 14px;
   font-weight: bold;
   border-radius: 10px;
@@ -53,6 +88,16 @@ body {
   cursor: pointer;
   transition: all 0.2s ease;
   letter-spacing: 1px;
+}
+
+.btn-sm {
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.btn-lg {
+  padding: 14px 20px;
+  font-size: 15px;
 }
 
 /* PRIMARY (START GAME) */

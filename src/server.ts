@@ -39,6 +39,8 @@ wsServer.on("connection", (socket) => {
       game.rejoinLobby(player.id);
     } else if (msg.type === "CHOOSE_COLOR") {
       game.chooseColor(player.id, msg.color);
+    } else if (msg.type === "SET_NAME") {
+      game.setPlayerName(player.id, msg.name);
     } else {
       console.log("Unknown message type:", msg.type);
     }
