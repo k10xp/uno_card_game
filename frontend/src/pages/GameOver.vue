@@ -3,7 +3,7 @@ import { computed } from "vue";
 import { gameOver, send } from "@/socket";
 import router from "@/router";
 
-const winner = computed(() => gameOver.value?.winner);
+const winnerName = computed(() => gameOver.value?.winnerName);
 function returnToLobby() {
   send({ type: "REJOIN_LOBBY" });
   router.push("/");
@@ -14,8 +14,8 @@ function returnToLobby() {
   <div class="game-over">
     <h1>Game Over</h1>
 
-    <p v-if="winner">
-      🏆 Player <strong>{{ winner }}</strong> wins!
+    <p v-if="winnerName">
+      🏆 <strong>{{ winnerName }}</strong> wins!
     </p>
 
     <p v-else>No winner data received.</p>

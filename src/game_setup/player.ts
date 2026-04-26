@@ -8,16 +8,19 @@ export class Player {
   socket: WebSocket; //Player connection
   hand: Card[]; //Player cards
   role: PlayerRole; //Player/Spectator
+  name: string = "Player";
 
   constructor(
     id: string,
     socket: WebSocket,
     hand: Card[],
-    role: PlayerRole = "player"
+    role: PlayerRole = "player",
+    name: string = "Player"
   ) {
     this.id = id;
     this.socket = socket;
     this.hand = hand;
     this.role = role;
+    this.name = name;
   }
 }

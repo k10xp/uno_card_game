@@ -5,7 +5,9 @@ import router from "@/router";
 export const gameState = ref<any>(null);
 export const lobby = ref<any>(null);
 export const gameStarted = ref(false);
-export const gameOver = ref<{ winner: string } | null>(null);
+export const gameOver = ref<{ winner: string; winnerName?: string } | null>(
+  null
+);
 export const pendingColorChoice = ref(false);
 export const myPlayerId = ref<string | null>(null);
 
@@ -111,6 +113,7 @@ function handleGameOver(data: any) {
 
   gameOver.value = {
     winner: data.winner,
+    winnerName: data.winnerName,
   };
 
   //Rest all other states
