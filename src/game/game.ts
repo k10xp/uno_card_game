@@ -37,7 +37,13 @@ export class Game {
     }
 
     const playerId = id ?? `spectator-${Date.now()}`;
-    const newPlayer = new Player(playerId, socket, [], role);
+    const newPlayer = new Player(
+      playerId,
+      socket,
+      [],
+      role,
+      `Player ${playerId}`
+    );
     this.players.push(newPlayer);
 
     this.sendLobbyState();
@@ -221,6 +227,14 @@ export class Game {
   // Game Helpers
   // -----------------------
 
+  setPlayerName(playerId: string, name: string) {
+    const player = this.players.find((p) => p.id === playerId);
+    if (!player) return;
+
+    player.name = name;
+    this.sendLobbyState();
+  }
+
   //Skip next player turn
   private handleSkip() {
     this.nextTurn(); // move to skipped player
@@ -294,7 +308,14 @@ export class Game {
       p.id = `spectator-${p.id}`; // prefix old id
     }
 
-    this.broadcast({ type: "GAME_OVER", winner: winnerId });
+    const winner = this.players.find(
+      (p) => p.id === winnerId || p.id === `spectator-${winnerId}`
+    );
+    this.broadcast({
+      type: "GAME_OVER",
+      winner: winnerId,
+      winnerName: winner?.name ?? `Player ${winnerId}`,
+    });
 
     this.currentGamePlayers = [];
     this.sendLobbyState();
@@ -343,7 +364,16 @@ export class Game {
 
   private sendLobbyState() {
     const activeCount = this.players.filter((p) => p.role === "player").length;
-    this.broadcast({ type: "LOBBY", playerCount: activeCount });
+
+    this.broadcast({
+      type: "LOBBY",
+      playerCount: activeCount, // ✅ keep old
+      players: this.players.map((p) => ({
+        id: p.id,
+        name: p.name,
+        role: p.role,
+      })),
+    });
   }
 
   private sendGameState() {
@@ -357,7 +387,7 @@ export class Game {
 
       const opponents = this.currentGamePlayers
         .filter((p) => p.id !== player.id)
-        .map((p) => ({ id: p.id, cardCount: p.hand.length }));
+        .map((p) => ({ id: p.id, cardCount: p.hand.length, name: p.name }));
 
       const isWildPlayer = this.pendingWild?.playerId === player.id;
 

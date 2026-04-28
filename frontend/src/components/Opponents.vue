@@ -1,6 +1,6 @@
 <script setup lang="ts">
 defineProps<{
-  opponents: { id: string; cardCount: number }[];
+  opponents: { id: string; name: string; cardCount: number }[];
 }>();
 </script>
 
@@ -9,7 +9,7 @@ defineProps<{
     <h3>Opponents</h3>
 
     <div v-for="opp in opponents" :key="opp.id" class="opp">
-      👤 Player {{ opp.id }} — 🂠 {{ opp.cardCount }}
+      {{ opp.name }} — 🂠 {{ opp.cardCount }}
     </div>
   </div>
 </template>
